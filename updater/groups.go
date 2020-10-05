@@ -35,6 +35,15 @@ func (g Groups) Validate() error {
 	return nil
 }
 
+func (g Groups) ByName(name string) *Group {
+	for _, group := range g {
+		if group.Name == name {
+			return group
+		}
+	}
+	return nil
+}
+
 // GroupDependencies groups dependencies according to this configuration.
 func (g Groups) GroupDependencies(deps []Dependency) (byGroupName map[string][]Dependency, ungrouped []Dependency) {
 	byGroupName = make(map[string][]Dependency, len(g))

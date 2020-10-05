@@ -4,58 +4,59 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	updater2 "github.com/thepwagner/action-update/updater"
+	"github.com/thepwagner/action-update/updater"
 )
 
 const (
+	groupName  = "foo"
 	baseBranch = "main"
 	mockPath   = "github.com/foo/bar"
 )
 
-var mockUpdate = updater2.Update{
+var mockUpdate = updater.Update{
 	Path: mockPath,
 	Next: "v2.0.0",
 }
 
 func TestUpdatesByBranch(t *testing.T) {
-	byBranch := updater2.UpdatesByBranch{}
+	byBranch := updater.UpdatesByBranch{}
 	assert.Len(t, byBranch, 0)
 }
 
 func TestUpdatesByBranch_AddOpen(t *testing.T) {
-	byBranch := updater2.UpdatesByBranch{}
+	byBranch := updater.UpdatesByBranch{}
 	byBranch.AddOpen(baseBranch, mockUpdate)
 
-	assert.Equal(t, updater2.UpdatesByBranch{
+	assert.Equal(t, updater.UpdatesByBranch{
 		baseBranch: {
-			Open: []updater2.Update{mockUpdate},
+			Open: []updater.Update{mockUpdate},
 		},
 	}, byBranch)
 
 	byBranch.AddOpen(baseBranch, mockUpdate)
-	assert.Equal(t, updater2.UpdatesByBranch{
+	assert.Equal(t, updater.UpdatesByBranch{
 		baseBranch: {
-			Open: []updater2.Update{mockUpdate},
+			Open: []updater.Update{mockUpdate},
 		},
 	}, byBranch)
 }
 
 func TestUpdatesByBranch_AddClosed(t *testing.T) {
-	byBranch := updater2.UpdatesByBranch{}
+	byBranch := updater.UpdatesByBranch{}
 	byBranch.AddClosed(baseBranch, mockUpdate)
 
-	assert.Equal(t, updater2.UpdatesByBranch{
+	assert.Equal(t, updater.UpdatesByBranch{
 		baseBranch: {
-			Closed: []updater2.Update{mockUpdate},
+			Closed: []updater.Update{mockUpdate},
 		},
 	}, byBranch)
 }
 
 func TestUpdates_OpenUpdate(t *testing.T) {
-	u := updater2.Updates{Open: []updater2.Update{mockUpdate}}
+	u := updater.Updates{Open: []updater.Update{mockUpdate}}
 
 	cases := map[string]struct {
-		Update updater2.Update
+		Update updater.Update
 		Open   string
 	}{
 		"open": {
@@ -63,11 +64,11 @@ func TestUpdates_OpenUpdate(t *testing.T) {
 			Open:   mockUpdate.Next,
 		},
 		"higher version": {
-			Update: updater2.Update{Path: mockPath, Next: "v3.0.0"},
+			Update: updater.Update{Path: mockPath, Next: "v3.0.0"},
 			Open:   mockUpdate.Next,
 		},
 		"lower version": {
-			Update: updater2.Update{Path: mockPath, Next: "v1.0.0"},
+			Update: updater.Update{Path: mockPath, Next: "v1.0.0"},
 			Open:   "",
 		},
 	}
@@ -80,6 +81,6 @@ func TestUpdates_OpenUpdate(t *testing.T) {
 }
 
 func TestUpdates_ClosedUpdate(t *testing.T) {
-	u := updater2.Updates{Open: []updater2.Update{mockUpdate}}
+	u := updater.Updates{Open: []updater.Update{mockUpdate}}
 	assert.Equal(t, "", u.ClosedUpdate(mockUpdate))
 }

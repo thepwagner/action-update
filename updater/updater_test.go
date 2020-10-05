@@ -92,14 +92,14 @@ func TestRepoUpdater_UpdateAll_Multiple(t *testing.T) {
 	u.AssertExpectations(t)
 }
 
-func TestRepoUpdater_UpdateAll_MultipleBatch(t *testing.T) {
+func TestRepoUpdater_UpdateAll_MultipleGrouped(t *testing.T) {
+	group := &updater.Group{Name: groupName, Pattern: "github.com/foo"}
+	err := group.Validate()
+	require.NoError(t, err)
+
 	r := &mockRepo{}
 	u := &mockUpdater{}
-	batchName := "foo"
-	testGroup := &updater.Group{Name: batchName, Pattern: "github.com/foo"}
-	err := testGroup.Validate()
-	require.NoError(t, err)
-	ru := updater.NewRepoUpdater(r, u, updater.WithGroups(testGroup))
+	ru := updater.NewRepoUpdater(r, u, updater.WithGroups(group))
 	ctx := context.Background()
 
 	r.On("SetBranch", baseBranch).Return(nil)
@@ -114,6 +114,28 @@ func TestRepoUpdater_UpdateAll_MultipleBatch(t *testing.T) {
 	r.On("NewBranch", baseBranch, "action-update-go/main/foo").Times(1).Return(nil)
 	u.On("ApplyUpdate", ctx, mock.Anything).Times(2).Return(nil)
 	r.On("Push", ctx, mock.Anything, mock.Anything).Times(1).Return(nil)
+
+	err = ru.UpdateAll(ctx, baseBranch)
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+	u.AssertExpectations(t)
+}
+
+func TestRepoUpdater_UpdateAll_RangeFiltering(t *testing.T) {
+	group := &updater.Group{Name: groupName, Pattern: "github.com/foo", Range: "< v2"}
+	err := group.Validate()
+	require.NoError(t, err)
+
+	r := &mockRepo{}
+	u := &mockUpdater{}
+	ru := updater.NewRepoUpdater(r, u, updater.WithGroups(group))
+	ctx := context.Background()
+
+	r.On("SetBranch", baseBranch).Return(nil)
+	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
+	u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
+	availableUpdate := mockUpdate // avoid pointer to shared reference
+	u.On("Check", ctx, dep).Return(&availableUpdate, nil)
 
 	err = ru.UpdateAll(ctx, baseBranch)
 	require.NoError(t, err)

@@ -192,6 +192,8 @@ func (u *RepoUpdater) singleUpdate(ctx context.Context, log logrus.FieldLogger, 
 }
 
 func (u *RepoUpdater) groupedUpdate(ctx context.Context, log logrus.FieldLogger, baseBranch, groupName string, deps []Dependency) (int, error) {
+	group := u.groups.ByName(groupName)
+
 	// Iterate dependencies, collecting updates:
 	var updates []Update
 	for _, dep := range deps {
@@ -202,7 +204,13 @@ func (u *RepoUpdater) groupedUpdate(ctx context.Context, log logrus.FieldLogger,
 			continue
 		}
 		// There is an update to apply
-		depLog.WithField("next_version", update.Next).Debug("update available")
+		updateLog := depLog.WithField("next_version", update.Next)
+		updateLog.Debug("update available")
+
+		if !group.InRange(update.Next) {
+			updateLog.WithField("range", group.Range).Info("skipping version outside of range")
+			continue
+		}
 		updates = append(updates, *update)
 	}
 	if len(updates) == 0 {

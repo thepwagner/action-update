@@ -29,6 +29,9 @@ func TestGroup_InRange(t *testing.T) {
 			included: []string{"v0.1", "v1", "v1.0.0"},
 			excluded: []string{"v2", "v1.0.1"},
 		},
+		"": {
+			included: []string{"v0.1", "v1", "v1.0.0", "v2", "v1.0.1"},
+		},
 	}
 
 	for r, tc := range cases {
