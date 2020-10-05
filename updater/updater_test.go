@@ -96,7 +96,10 @@ func TestRepoUpdater_UpdateAll_MultipleBatch(t *testing.T) {
 	r := &mockRepo{}
 	u := &mockUpdater{}
 	batchName := "foo"
-	ru := updater.NewRepoUpdater(r, u, updater.WithGroups(updater.NewTestGroup(batchName, "^github.com/foo")))
+	testGroup := &updater.Group{Name: batchName, Pattern: "github.com/foo"}
+	err := testGroup.Validate()
+	require.NoError(t, err)
+	ru := updater.NewRepoUpdater(r, u, updater.WithGroups(testGroup))
 	ctx := context.Background()
 
 	r.On("SetBranch", baseBranch).Return(nil)
@@ -112,7 +115,7 @@ func TestRepoUpdater_UpdateAll_MultipleBatch(t *testing.T) {
 	u.On("ApplyUpdate", ctx, mock.Anything).Times(2).Return(nil)
 	r.On("Push", ctx, mock.Anything, mock.Anything).Times(1).Return(nil)
 
-	err := ru.UpdateAll(ctx, baseBranch)
+	err = ru.UpdateAll(ctx, baseBranch)
 	require.NoError(t, err)
 	r.AssertExpectations(t)
 	u.AssertExpectations(t)

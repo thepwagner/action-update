@@ -1,136 +1,48 @@
 package updater_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/thepwagner/action-update/updater"
 )
 
-func TestParseGroups(t *testing.T) {
+func TestGroup_InRange(t *testing.T) {
 	cases := map[string]struct {
-		in       string
-		err      string
-		expected updater.Groups
+		included []string
+		excluded []string
 	}{
-		"empty": {
-			in:       ``,
-			expected: updater.Groups{},
+		"> v1": {
+			included: []string{"v2", "v1.0.1"},
+			excluded: []string{"v1", "v1.0.0", "v0.1"},
 		},
-		"single": {
-			in: `---
-- name: foo
-  pattern: github.com/thepwagner
-  frequency: weekly
-  range: ">=v1.4.0, <v2"`,
-			expected: updater.Groups{{
-				Name:      "foo",
-				Pattern:   "github.com/thepwagner",
-				Frequency: "weekly",
-				Range:     ">=v1.4.0, <v2",
-			}},
+		">= v1": {
+			included: []string{"v2", "v1.0.1", "v1", "v1.0.0"},
+			excluded: []string{"v0.1"},
 		},
-		"multiple": {
-			in: `---
-- name: foo
-  pattern: github.com
-- name: bar
-  pattern: gopkg.in`,
-			expected: updater.Groups{
-				{
-					Name:    "foo",
-					Pattern: "github.com",
-				},
-				{
-					Name:    "bar",
-					Pattern: "gopkg.in",
-				},
-			},
+		"< v1": {
+			included: []string{"v0.1"},
+			excluded: []string{"v2", "v1.0.1", "v1", "v1.0.0"},
 		},
-		"bad yaml": {
-			in:  `{"worst_yaml":"is_json"}`,
-			err: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!map into updater.Groups",
-		},
-		"duplicate name": {
-			in: `---
-- name: foo
-  pattern: foo
-- name: foo
-  pattern: foo`,
-			err: `duplicate group name: "foo"`,
-		},
-		"regexp pattern": {
-			in: `---
-- name: foo
-  pattern: /.*pwagner.*/`,
-			expected: updater.Groups{{
-				Name:    "foo",
-				Pattern: "/.*pwagner.*/",
-			}},
+		"<= v1": {
+			included: []string{"v0.1", "v1", "v1.0.0"},
+			excluded: []string{"v2", "v1.0.1"},
 		},
 	}
 
-	for label, tc := range cases {
-		t.Run(label, func(t *testing.T) {
-			groups, err := updater.ParseGroups(tc.in)
-			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
-				assert.Nil(t, groups)
-			} else {
-				require.NoError(t, err)
-				if assert.Equal(t, len(tc.expected), len(groups)) {
-					for i, g := range groups {
-						assert.Equal(t, tc.expected[i].Name, g.Name)
-						assert.Equal(t, tc.expected[i].Pattern, g.Pattern)
-						assert.Equal(t, tc.expected[i].Frequency, g.Frequency)
-						assert.Equal(t, tc.expected[i].Range, g.Range)
-					}
-				}
+	for r, tc := range cases {
+		t.Run(r, func(t *testing.T) {
+			for _, v := range tc.included {
+				t.Run(fmt.Sprintf("includes %s", v), func(t *testing.T) {
+					assert.True(t, updater.Group{Range: r}.InRange(v))
+				})
+			}
+			for _, v := range tc.excluded {
+				t.Run(fmt.Sprintf("excludes %q", v), func(t *testing.T) {
+					assert.False(t, updater.Group{Range: r}.InRange(v))
+				})
 			}
 		})
 	}
-}
-
-func TestGroups_GroupDependencies(t *testing.T) {
-	groups := updater.Groups{
-		{
-			Name:    "contains foo",
-			Pattern: "/.*foo.*/",
-		},
-		{
-			Name:    "prefix bar",
-			Pattern: "bar",
-		},
-	}
-	err := groups.Validate()
-	require.NoError(t, err)
-
-	byGroupName, ungrouped := groups.GroupDependencies([]updater.Dependency{
-		{Path: "foo at the start"},
-		{Path: "in the foo middle"},
-		{Path: "final foo"},
-		{Path: "bar"},
-		{Path: "bar at the start"},
-		{Path: "final bar"},
-		{Path: "no match"},
-		{Path: "emoji 😀"},
-	})
-
-	assert.Equal(t, map[string][]updater.Dependency{
-		"contains foo": {
-			{Path: "foo at the start"},
-			{Path: "in the foo middle"},
-			{Path: "final foo"},
-		},
-		"prefix bar": {
-			{Path: "bar"},
-			{Path: "bar at the start"},
-		},
-	}, byGroupName)
-	assert.Equal(t, []updater.Dependency{
-		{Path: "final bar"},
-		{Path: "no match"},
-		{Path: "emoji 😀"},
-	}, ungrouped)
 }

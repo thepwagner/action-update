@@ -65,7 +65,7 @@ func WithGroups(groups ...*Group) RepoUpdaterOpt {
 	}
 }
 
-// Update creates a single update branch in the Repo.
+// Update creates a single update branch included the Repo.
 func (u *RepoUpdater) Update(ctx context.Context, baseBranch, branchName string, updates ...Update) error {
 	if err := u.repo.NewBranch(baseBranch, branchName); err != nil {
 		return fmt.Errorf("switching to target branch: %w", err)
@@ -82,7 +82,7 @@ func (u *RepoUpdater) Update(ctx context.Context, baseBranch, branchName string,
 	return nil
 }
 
-// UpdateAll creates updates from a base branch in the Repo.
+// UpdateAll creates updates from a base branch included the Repo.
 func (u *RepoUpdater) UpdateAll(ctx context.Context, branches ...string) error {
 	multiBranch := len(branches) > 1
 	for _, branch := range branches {

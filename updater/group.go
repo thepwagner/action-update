@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/dependabot/gomodules-extracted/cmd/go/_internal_/semver"
 )
 
 type Group struct {
@@ -23,14 +23,6 @@ type Group struct {
 	compiledPattern *regexp.Regexp
 }
 
-func NewTestGroup(name, pattern string) *Group {
-	return &Group{
-		Name:            name,
-		Pattern:         pattern,
-		compiledPattern: regexp.MustCompile(pattern),
-	}
-}
-
 type Frequency string
 
 const (
@@ -38,74 +30,52 @@ const (
 	FrequencyWeekly Frequency = "weekly"
 )
 
-// Groups is an ordered list of Group with unique names.
-// Prefer a list with .Name to map[string]Group for clear iteration order.
-type Groups []*Group
-
-func ParseGroups(s string) (Groups, error) {
-	ug := Groups{}
-	if err := yaml.Unmarshal([]byte(s), &ug); err != nil {
-		return nil, err
+func (g *Group) Validate() error {
+	if g.Name == "" {
+		return fmt.Errorf("groups must specify name")
 	}
-	if err := ug.Validate(); err != nil {
-		return nil, err
+	if g.Pattern == "" {
+		return fmt.Errorf("groups must specify pattern")
+	}
+	switch g.Frequency {
+	case "", FrequencyDaily, FrequencyWeekly:
+	default:
+		return fmt.Errorf("frequency must be: [%s,%s]", FrequencyDaily, FrequencyWeekly)
 	}
 
-	return ug, nil
-}
-
-func (g Groups) Validate() error {
-	uniqNames := map[string]struct{}{}
-	for _, group := range g {
-		if group.Name == "" {
-			return fmt.Errorf("groups must specify name")
+	if strings.HasPrefix(g.Pattern, "/") && strings.HasSuffix(g.Pattern, "/") {
+		re, err := regexp.Compile(g.Pattern[1 : len(g.Pattern)-1])
+		if err != nil {
+			return fmt.Errorf("compiling pattern: %w", err)
 		}
-		if group.Pattern == "" {
-			return fmt.Errorf("groups must specify pattern")
-		}
-		switch group.Frequency {
-		case "", FrequencyDaily, FrequencyWeekly:
-		default:
-			return fmt.Errorf("frequency must be: [%s,%s]", FrequencyDaily, FrequencyWeekly)
-		}
-
-		if _, ok := uniqNames[group.Name]; ok {
-			return fmt.Errorf("duplicate group name: %q", group.Name)
-		}
-		uniqNames[group.Name] = struct{}{}
-
-		if strings.HasPrefix(group.Pattern, "/") && strings.HasSuffix(group.Pattern, "/") {
-			re, err := regexp.Compile(group.Pattern[1 : len(group.Pattern)-1])
-			if err != nil {
-				return fmt.Errorf("compiling group %q: %w", group.Name, err)
-			}
-			group.compiledPattern = re
-		} else {
-			group.compiledPattern = regexp.MustCompile("^" + regexp.QuoteMeta(group.Pattern))
-		}
+		g.compiledPattern = re
+	} else {
+		g.compiledPattern = regexp.MustCompile("^" + regexp.QuoteMeta(g.Pattern))
 	}
 	return nil
 }
 
-// GroupDependencies groups dependencies according to this configuration.
-func (g Groups) GroupDependencies(deps []Dependency) (byGroupName map[string][]Dependency, ungrouped []Dependency) {
-	byGroupName = make(map[string][]Dependency, len(g))
-	for _, dep := range deps {
-		group := g.matchGroup(dep)
-		if group != "" {
-			byGroupName[group] = append(byGroupName[group], dep)
-		} else {
-			ungrouped = append(ungrouped, dep)
+func (g Group) InRange(v string) bool {
+	for _, rangeCond := range strings.Split(g.Range, ",") {
+		rangeCond = strings.TrimSpace(rangeCond)
+		switch {
+		case strings.HasPrefix(rangeCond, "<="):
+			if semver.Compare(strings.TrimSpace(rangeCond[2:]), v) < 0 {
+				return false
+			}
+		case strings.HasPrefix(rangeCond, ">="):
+			if semver.Compare(strings.TrimSpace(rangeCond[2:]), v) > 0 {
+				return false
+			}
+		case strings.HasPrefix(rangeCond, "<"):
+			if semver.Compare(strings.TrimSpace(rangeCond[1:]), v) <= 0 {
+				return false
+			}
+		case strings.HasPrefix(rangeCond, ">"):
+			if semver.Compare(strings.TrimSpace(rangeCond[1:]), v) >= 0 {
+				return false
+			}
 		}
 	}
-	return
-}
-
-func (g Groups) matchGroup(dep Dependency) string {
-	for _, group := range g {
-		if group.compiledPattern.MatchString(dep.Path) {
-			return group.Name
-		}
-	}
-	return ""
+	return true
 }
