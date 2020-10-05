@@ -35,7 +35,7 @@ type Repo interface {
 
 type Updater interface {
 	Dependencies(context.Context) ([]Dependency, error)
-	Check(context.Context, Dependency) (*Update, error)
+	Check(ctx context.Context, dep Dependency, filter func(string) bool) (*Update, error)
 	ApplyUpdate(context.Context, Update) error
 }
 
@@ -149,22 +149,18 @@ func (u *RepoUpdater) updateBranch(ctx context.Context, log logrus.FieldLogger, 
 	return nil
 }
 
-func (u *RepoUpdater) checkForUpdate(ctx context.Context, log logrus.FieldLogger, dep Dependency) *Update {
-	update, err := u.updater.Check(ctx, dep)
+func (u *RepoUpdater) checkForUpdate(ctx context.Context, log logrus.FieldLogger, dep Dependency, filter func(string) bool) *Update {
+	update, err := u.updater.Check(ctx, dep, filter)
 	if err != nil {
 		log.WithError(err).Warn("error checking for updates")
 		return nil
 	}
-	if update == nil {
-		return nil
-	}
-
 	return update
 }
 
 func (u *RepoUpdater) singleUpdate(ctx context.Context, log logrus.FieldLogger, baseBranch string, dep Dependency) (bool, error) {
 	depLog := log.WithField("path", dep.Path)
-	update := u.checkForUpdate(ctx, depLog, dep)
+	update := u.checkForUpdate(ctx, depLog, dep, nil)
 	if update == nil {
 		return false, nil
 	}
@@ -199,18 +195,13 @@ func (u *RepoUpdater) groupedUpdate(ctx context.Context, log logrus.FieldLogger,
 	for _, dep := range deps {
 		// Is an update available for this dependency?
 		depLog := log.WithField("path", dep.Path)
-		update := u.checkForUpdate(ctx, depLog, dep)
+		update := u.checkForUpdate(ctx, depLog, dep, group.InRange)
 		if update == nil {
 			continue
 		}
 		// There is an update to apply
 		updateLog := depLog.WithField("next_version", update.Next)
 		updateLog.Debug("update available")
-
-		if !group.InRange(update.Next) {
-			updateLog.WithField("range", group.Range).Info("skipping version outside of range")
-			continue
-		}
 		updates = append(updates, *update)
 	}
 	if len(updates) == 0 {

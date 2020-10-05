@@ -42,7 +42,7 @@ func TestRepoUpdater_UpdateAll_NoChanges(t *testing.T) {
 	r.On("SetBranch", baseBranch).Return(nil)
 	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
-	u.On("Check", ctx, dep).Return(nil, nil)
+	u.On("Check", ctx, dep, mock.Anything).Return(nil, nil)
 
 	err := ru.UpdateAll(ctx, baseBranch)
 	require.NoError(t, err)
@@ -60,7 +60,7 @@ func TestRepoUpdater_UpdateAll_Update(t *testing.T) {
 	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
 	availableUpdate := mockUpdate // avoid pointer to shared reference
-	u.On("Check", ctx, dep).Return(&availableUpdate, nil)
+	u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
 	setupMockUpdate(ctx, r, u, mockUpdate) // delegates to .Update()
 
 	err := ru.UpdateAll(ctx, baseBranch)
@@ -80,9 +80,9 @@ func TestRepoUpdater_UpdateAll_Multiple(t *testing.T) {
 	otherDep := updater.Dependency{Path: "github.com/foo/baz", Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep, otherDep}, nil)
 	availableUpdate := mockUpdate // avoid pointer to shared reference
-	u.On("Check", ctx, dep).Return(&availableUpdate, nil)
+	u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
 	otherUpdate := updater.Update{Path: "github.com/foo/baz", Next: "v3.0.0"}
-	u.On("Check", ctx, otherDep).Return(&otherUpdate, nil)
+	u.On("Check", ctx, otherDep, mock.Anything).Return(&otherUpdate, nil)
 	setupMockUpdate(ctx, r, u, mockUpdate)  // delegates to .Update()
 	setupMockUpdate(ctx, r, u, otherUpdate) // delegates to .Update()
 
@@ -107,35 +107,13 @@ func TestRepoUpdater_UpdateAll_MultipleGrouped(t *testing.T) {
 	otherDep := updater.Dependency{Path: "github.com/foo/baz", Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep, otherDep}, nil)
 	availableUpdate := mockUpdate // avoid pointer to shared reference
-	u.On("Check", ctx, dep).Return(&availableUpdate, nil)
+	u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
 	otherUpdate := updater.Update{Path: "github.com/foo/baz", Next: "v3.0.0"}
-	u.On("Check", ctx, otherDep).Return(&otherUpdate, nil)
+	u.On("Check", ctx, otherDep, mock.Anything).Return(&otherUpdate, nil)
 
 	r.On("NewBranch", baseBranch, "action-update-go/main/foo").Times(1).Return(nil)
 	u.On("ApplyUpdate", ctx, mock.Anything).Times(2).Return(nil)
 	r.On("Push", ctx, mock.Anything, mock.Anything).Times(1).Return(nil)
-
-	err = ru.UpdateAll(ctx, baseBranch)
-	require.NoError(t, err)
-	r.AssertExpectations(t)
-	u.AssertExpectations(t)
-}
-
-func TestRepoUpdater_UpdateAll_RangeFiltering(t *testing.T) {
-	group := &updater.Group{Name: groupName, Pattern: "github.com/foo", Range: "< v2"}
-	err := group.Validate()
-	require.NoError(t, err)
-
-	r := &mockRepo{}
-	u := &mockUpdater{}
-	ru := updater.NewRepoUpdater(r, u, updater.WithGroups(group))
-	ctx := context.Background()
-
-	r.On("SetBranch", baseBranch).Return(nil)
-	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
-	u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
-	availableUpdate := mockUpdate // avoid pointer to shared reference
-	u.On("Check", ctx, dep).Return(&availableUpdate, nil)
 
 	err = ru.UpdateAll(ctx, baseBranch)
 	require.NoError(t, err)
