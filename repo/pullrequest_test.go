@@ -8,16 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thepwagner/action-update/repo"
-	updater2 "github.com/thepwagner/action-update/updater"
+	"github.com/thepwagner/action-update/updater"
 )
 
 var (
-	awsSdkGo13417 = updater2.Update{
+	awsSdkGo13417 = updater.Update{
 		Path:     "github.com/aws/aws-sdk-go",
 		Previous: "v1.34.16",
 		Next:     "v1.34.17",
 	}
-	fooBar987 = updater2.Update{
+	fooBar987 = updater.Update{
 		Path:     "github.com/foo/bar",
 		Previous: "v0.4.1",
 		Next:     "v99.88.77",
@@ -54,7 +54,7 @@ func TestGitHubPullRequestContent_ParseBody(t *testing.T) {
 {"updates":[{"path":"github.com/aws/aws-sdk-go","previous":"v1.34.16","next":"v1.34.17"}],"signature":"HAF6zSdBBOsbrLRClce7M73tN7VhCdPB6YYhECL/ifDC6DHR0YSGXoY6JQeEaFoncJbxp/afBpY+GVE5DUfWwQ=="}
 -->`
 	parsed := gen.ParseBody(body)
-	assert.Equal(t, []updater2.Update{awsSdkGo13417}, parsed)
+	assert.Equal(t, []updater.Update{awsSdkGo13417}, parsed)
 }
 
 func TestGitHubPullRequestContent_GenerateNoChangeLog(t *testing.T) {
