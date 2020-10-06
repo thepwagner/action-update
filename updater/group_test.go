@@ -25,9 +25,17 @@ func TestGroup_InRange(t *testing.T) {
 			included: []string{"v0.1"},
 			excluded: []string{"v2", "v1.0.1", "v1", "v1.0.0"},
 		},
+		"< 1.0.0": {
+			included: []string{"v0.1"},
+			excluded: []string{"v2", "v1.0.1", "v1", "v1.0.0"},
+		},
 		"<= v1": {
 			included: []string{"v0.1", "v1", "v1.0.0"},
 			excluded: []string{"v2", "v1.0.1"},
+		},
+		">=v2 , < v3": {
+			included: []string{"v2", "v2.0.0"},
+			excluded: []string{"v0.1", "v1", "v1.0.0", "v1.0.1", "v3"},
 		},
 		"": {
 			included: []string{"v0.1", "v1", "v1.0.0", "v2", "v1.0.1"},

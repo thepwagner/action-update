@@ -60,22 +60,30 @@ func (g Group) InRange(v string) bool {
 		rangeCond = strings.TrimSpace(rangeCond)
 		switch {
 		case strings.HasPrefix(rangeCond, "<="):
-			if semver.Compare(strings.TrimSpace(rangeCond[2:]), v) < 0 {
+			if semver.Compare(cleanRange(rangeCond, 2), v) < 0 {
 				return false
 			}
 		case strings.HasPrefix(rangeCond, ">="):
-			if semver.Compare(strings.TrimSpace(rangeCond[2:]), v) > 0 {
+			if semver.Compare(cleanRange(rangeCond, 2), v) > 0 {
 				return false
 			}
 		case strings.HasPrefix(rangeCond, "<"):
-			if semver.Compare(strings.TrimSpace(rangeCond[1:]), v) <= 0 {
+			if semver.Compare(cleanRange(rangeCond, 1), v) <= 0 {
 				return false
 			}
 		case strings.HasPrefix(rangeCond, ">"):
-			if semver.Compare(strings.TrimSpace(rangeCond[1:]), v) >= 0 {
+			if semver.Compare(cleanRange(rangeCond, 1), v) >= 0 {
 				return false
 			}
 		}
 	}
 	return true
+}
+
+func cleanRange(rangeCond string, prefixLen int) string {
+	s := strings.TrimSpace(rangeCond[prefixLen:])
+	if !strings.HasPrefix(s, "v") {
+		return fmt.Sprintf("v%s", s)
+	}
+	return s
 }
