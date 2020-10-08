@@ -3,10 +3,31 @@ package updater_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/thepwagner/action-update/updater"
 )
+
+func TestGroup_CoolDownDuration(t *testing.T) {
+	g := updater.Group{Name: "test", Pattern: "test"}
+
+	cases := map[string]time.Duration{
+		"P1D": 24 * time.Hour,
+		"1D":  24 * time.Hour,
+		"1W":  7 * 24 * time.Hour,
+	}
+
+	for in, expected := range cases {
+		t.Run(in, func(t *testing.T) {
+			g.CoolDown = in
+			err := g.Validate()
+			require.NoError(t, err)
+			assert.Equal(t, expected, g.CoolDownDuration())
+		})
+	}
+}
 
 func TestGroup_InRange(t *testing.T) {
 	cases := map[string]struct {

@@ -25,10 +25,9 @@ func TestParseGroups(t *testing.T) {
   frequency: weekly
   range: ">=v1.4.0, <v2"`,
 			expected: updater.Groups{{
-				Name:      "foo",
-				Pattern:   "github.com/thepwagner",
-				Frequency: "weekly",
-				Range:     ">=v1.4.0, <v2",
+				Name:    "foo",
+				Pattern: "github.com/thepwagner",
+				Range:   ">=v1.4.0, <v2",
 			}},
 		},
 		"multiple": {
@@ -83,7 +82,6 @@ func TestParseGroups(t *testing.T) {
 					for i, g := range groups {
 						assert.Equal(t, tc.expected[i].Name, g.Name)
 						assert.Equal(t, tc.expected[i].Pattern, g.Pattern)
-						assert.Equal(t, tc.expected[i].Frequency, g.Frequency)
 						assert.Equal(t, tc.expected[i].Range, g.Range)
 					}
 				}
