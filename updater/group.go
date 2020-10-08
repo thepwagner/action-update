@@ -19,8 +19,10 @@ type Group struct {
 
 	// Parameters that apply to members:
 	// Range is a comma separated list of allowed semver ranges
-	Range    string `yaml:"range"`
-	CoolDown string `yaml:"cooldown"`
+	Range      string `yaml:"range"`
+	CoolDown   string `yaml:"cooldown"`
+	PreScript  string `yaml:"pre-script"`
+	PostScript string `yaml:"post-script"`
 
 	compiledPattern *regexp.Regexp
 }
@@ -48,7 +50,7 @@ func (g *Group) Validate() error {
 	return nil
 }
 
-func (g Group) InRange(v string) bool {
+func (g *Group) InRange(v string) bool {
 	for _, rangeCond := range strings.Split(g.Range, ",") {
 		rangeCond = strings.TrimSpace(rangeCond)
 		switch {
@@ -90,7 +92,7 @@ const (
 	oneDay   = 24 * time.Hour
 )
 
-func (g Group) CoolDownDuration() time.Duration {
+func (g *Group) CoolDownDuration() time.Duration {
 	m := durPattern.FindStringSubmatch(g.CoolDown)
 
 	var ret time.Duration

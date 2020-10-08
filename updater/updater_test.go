@@ -3,6 +3,8 @@ package updater_test
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -119,4 +121,48 @@ func TestRepoUpdater_UpdateAll_MultipleGrouped(t *testing.T) {
 	require.NoError(t, err)
 	r.AssertExpectations(t)
 	u.AssertExpectations(t)
+}
+
+func TestRepoUpdater_UpdateAll_Scripts(t *testing.T) {
+	cases := []*updater.Group{
+		{
+			Name:      groupName,
+			Pattern:   "github.com/foo",
+			PreScript: `echo "sup" && touch token`,
+		},
+		{
+			Name:       groupName,
+			Pattern:    "github.com/foo",
+			PostScript: `echo "sup" && touch token`,
+		},
+	}
+
+	for _, group := range cases {
+		err := group.Validate()
+		require.NoError(t, err)
+
+		tmpDir := t.TempDir()
+		tokenPath := filepath.Join(tmpDir, "token")
+		r := &mockRepo{}
+		u := &mockUpdater{}
+		ru := updater.NewRepoUpdater(r, u, updater.WithGroups(group))
+		ctx := context.Background()
+
+		r.On("SetBranch", baseBranch).Return(nil)
+		dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
+		u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
+		availableUpdate := mockUpdate // avoid pointer to shared reference
+		u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
+		r.On("NewBranch", baseBranch, "action-update-go/main/foo").Times(1).Return(nil)
+		u.On("ApplyUpdate", ctx, mock.Anything).Times(1).Return(nil)
+		r.On("Push", ctx, mock.Anything, mock.Anything).Times(1).Return(nil)
+		r.On("Root").Return(tmpDir)
+
+		err = ru.UpdateAll(ctx, baseBranch)
+		require.NoError(t, err)
+		r.AssertExpectations(t)
+		u.AssertExpectations(t)
+		_, err = os.Stat(tokenPath)
+		require.NoError(t, err)
+	}
 }

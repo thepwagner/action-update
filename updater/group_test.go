@@ -65,14 +65,15 @@ func TestGroup_InRange(t *testing.T) {
 
 	for r, tc := range cases {
 		t.Run(r, func(t *testing.T) {
+			u := &updater.Group{Range: r}
 			for _, v := range tc.included {
 				t.Run(fmt.Sprintf("includes %s", v), func(t *testing.T) {
-					assert.True(t, updater.Group{Range: r}.InRange(v))
+					assert.True(t, u.InRange(v))
 				})
 			}
 			for _, v := range tc.excluded {
 				t.Run(fmt.Sprintf("excludes %q", v), func(t *testing.T) {
-					assert.False(t, updater.Group{Range: r}.InRange(v))
+					assert.False(t, u.InRange(v))
 				})
 			}
 		})
