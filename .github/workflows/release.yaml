@@ -1,0 +1,13 @@
+name: Release
+on:
+  release:
+    types: [released]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: script/release
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_PAT }}
