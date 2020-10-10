@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# This script triggers "repository_dispatch" events on an array of dependencies
+# https://docs.github.com/en/free-pro-team@latest/actions/reference/events-that-trigger-workflows#repository_dispatch
+# It's expected these events will be handled by an action-update-go workflow, to open a PR updating the just-released dependency
+
+DOWNSTREAMS=(
+  thepwagner/action-update-go
+  thepwagner/action-update-docker
+  thepwagner/action-update-dockerurl
+)
+
+EMPTY_PAYLOAD='{"event_type":"action-update-go-release","client_payload":{"path":"","version":""}}'
+
+REPO_NAME=$(jq -r '.repository.full_name' "$GITHUB_EVENT_PATH")
+TAG_NAME=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
+EVENT_PAYLOAD=$(echo "$EMPTY_PAYLOAD" | jq ".client_payload.path |= \"github.com/$REPO_NAME\"" | jq ".client_payload.version |= \"$TAG_NAME\"")
+
+AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
+for DS in "${DOWNSTREAMS[@]}"; do
+  echo "$DS"
+  curl -H "$AUTH_HEADER" \
+    -d "$EVENT_PAYLOAD" \
+    "https://api.github.com/repos/${DS}/dispatches"
+done
+
