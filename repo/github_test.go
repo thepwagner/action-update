@@ -1,6 +1,7 @@
 package repo_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -16,6 +17,17 @@ func TestNewGitHubRepo(t *testing.T) {
 	gh, err := repo.NewGitHubRepo(gr, testKey, "foo/bar", "")
 	require.NoError(t, err)
 	assert.NotNil(t, gh)
+}
+
+func TestGitHubRepo_ExistingUpdates(t *testing.T) {
+	gr := initGitRepo(t, plumbing.NewBranchReferenceName(branchName))
+
+	gh, err := repo.NewGitHubRepo(gr, []byte(""), "thepwagner/action-update", "")
+	require.NoError(t, err)
+
+	existing, err := gh.ExistingUpdates(context.Background(), "main")
+	require.NoError(t, err)
+	assert.NotEmpty(t, existing)
 }
 
 func tokenOrSkip(t *testing.T) string {
