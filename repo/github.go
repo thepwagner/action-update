@@ -101,7 +101,7 @@ func (g *GitHubRepo) createPR(ctx context.Context, updates updater.UpdateGroup) 
 		}
 		return fmt.Errorf("creating PR: %w", err)
 	}
-	logrus.WithField("pr_number", pullRequest.GetNumber()).Info("created pull request")
+	g.repoLogger().WithField("pr_number", pullRequest.GetNumber()).Info("created pull request")
 	return nil
 }
 
@@ -122,23 +122,22 @@ func (g *GitHubRepo) updateFromPR(ctx context.Context, baseBranch string) ([]upd
 
 	var updates []updater.ExistingUpdate
 	for _, pr := range prs {
-		// Filter PullRequestS with signed descriptors:
+		// Filter PullRequestS with signed messages:
 		prLog := logrus.WithField("pr_number", pr.GetNumber())
-		descriptor, err := g.verifiedDescriptor(pr)
+		updateGroup, err := g.verifiedUpdateGroup(pr)
 		if err != nil {
 			prLog.WithError(err).Warn("signature failed")
 			continue
-		} else if len(descriptor) == 0 {
+		} else if updateGroup == nil {
 			prLog.Debug("not an update PR")
 			continue
 		}
 
-		// Combine descriptor with state to form an ExistingUpdate
+		// Combine signed payload with PR state to form an ExistingUpdate:
 		existing := updater.ExistingUpdate{
 			BaseBranch: pr.GetBase().GetRef(),
 			LastUpdate: pr.GetUpdatedAt(),
-			GroupName:  "", // TODO: from descriptor?
-			Updates:    descriptor,
+			Group:      *updateGroup,
 		}
 		switch pr.GetState() {
 		case "open":
@@ -147,13 +146,14 @@ func (g *GitHubRepo) updateFromPR(ctx context.Context, baseBranch string) ([]upd
 			existing.Merged = !pr.GetMergedAt().IsZero()
 		}
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			u := make([]string, 0, len(existing.Updates))
-			for _, update := range existing.Updates {
+			u := make([]string, 0, len(existing.Group.Updates))
+			for _, update := range existing.Group.Updates {
 				u = append(u, update.Path)
 			}
 			prLog.WithFields(logrus.Fields{
 				"open":    existing.Open,
 				"merged":  existing.Merged,
+				"group":   existing.Group.Name,
 				"updates": u,
 			}).Debug("existing update added")
 		}
@@ -162,12 +162,12 @@ func (g *GitHubRepo) updateFromPR(ctx context.Context, baseBranch string) ([]upd
 	return updates, nil
 }
 
-func (g *GitHubRepo) verifiedDescriptor(pr *github.PullRequest) ([]updater.Update, error) {
-	signed := ExtractSignedUpdateDescriptor(pr.GetBody())
+func (g *GitHubRepo) verifiedUpdateGroup(pr *github.PullRequest) (*updater.UpdateGroup, error) {
+	signed := ExtractSignedUpdateGroup(pr.GetBody())
 	if signed == nil {
 		return nil, nil
 	}
-	return updater.VerifySignedUpdateDescriptor(g.hmacKey, *signed)
+	return updater.VerifySignedUpdateGroup(g.hmacKey, *signed)
 }
 
 func (g *GitHubRepo) repoLogger() *logrus.Entry {

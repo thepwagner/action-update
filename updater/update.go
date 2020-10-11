@@ -13,8 +13,8 @@ type Update struct {
 }
 
 type UpdateGroup struct {
-	Name    string
-	Updates []Update
+	Name    string   `json:"name,omitempty"`
+	Updates []Update `json:"updates"`
 }
 
 func NewUpdateGroup(name string, updates ...Update) UpdateGroup {
@@ -28,7 +28,6 @@ type ExistingUpdate struct {
 	// If not open, was this update accepted?
 	Merged     bool
 	BaseBranch string
-	GroupName  string
 	LastUpdate time.Time
-	Updates    []Update
+	Group      UpdateGroup
 }

@@ -23,7 +23,7 @@ func TestRepoUpdater_Update(t *testing.T) {
 
 	branch := setupMockUpdate(ctx, r, u, mockUpdate)
 
-	err := ru.Update(ctx, baseBranch, branch, mockUpdate)
+	err := ru.Update(ctx, baseBranch, branch, updater.NewUpdateGroup("", mockUpdate))
 	require.NoError(t, err)
 }
 

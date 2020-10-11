@@ -68,19 +68,17 @@ func WithGroups(groups ...*Group) RepoUpdaterOpt {
 }
 
 // Update creates a single update branch included the Repo.
-func (u *RepoUpdater) Update(ctx context.Context, baseBranch, branchName string, updates ...Update) error {
+func (u *RepoUpdater) Update(ctx context.Context, baseBranch, branchName string, updates UpdateGroup) error {
 	if err := u.repo.NewBranch(baseBranch, branchName); err != nil {
 		return fmt.Errorf("switching to target branch: %w", err)
 	}
-	for _, update := range updates {
+	for _, update := range updates.Updates {
 		if err := u.updater.ApplyUpdate(ctx, update); err != nil {
 			return fmt.Errorf("applying update: %w", err)
 		}
 	}
 
-	// TODO: promote to signature?
-	group := NewUpdateGroup("", updates...)
-	if err := u.repo.Push(ctx, group); err != nil {
+	if err := u.repo.Push(ctx, updates); err != nil {
 		return fmt.Errorf("pushing update: %w", err)
 	}
 	return nil
