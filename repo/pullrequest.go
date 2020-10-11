@@ -30,7 +30,7 @@ func (d *GitHubPullRequestContent) Generate(ctx context.Context, updates updater
 	if len(updates.Updates) == 1 {
 		update := updates.Updates[0]
 		title = fmt.Sprintf("Update %s from %s to %s", update.Path, update.Previous, update.Next)
-		body, err = d.bodySingle(ctx, update)
+		body, err = d.bodySingle(ctx, updates)
 	} else {
 		title = "Dependency Updates"
 		body, err = d.bodyMulti(ctx, updates)
@@ -68,7 +68,8 @@ func ExtractSignedUpdateGroup(s string) *updater.SignedUpdateGroup {
 	return &signed
 }
 
-func (d *GitHubPullRequestContent) bodySingle(ctx context.Context, update updater.Update) (string, error) {
+func (d *GitHubPullRequestContent) bodySingle(ctx context.Context, updates updater.UpdateGroup) (string, error) {
+	update := updates.Updates[0]
 	var body strings.Builder
 	_, _ = fmt.Fprintf(&body, "Here is %s %s, I hope it works.\n", update.Path, update.Next)
 
@@ -76,7 +77,7 @@ func (d *GitHubPullRequestContent) bodySingle(ctx context.Context, update update
 		return "", err
 	}
 
-	if err := d.writeUpdateSignature(&body, updater.NewUpdateGroup("", update)); err != nil {
+	if err := d.writeUpdateSignature(&body, updates); err != nil {
 		return "", fmt.Errorf("writing update signature: %w", err)
 	}
 	return body.String(), nil
