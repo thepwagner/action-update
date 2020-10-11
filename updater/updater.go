@@ -30,7 +30,7 @@ type Repo interface {
 	Branch() string
 	// Push snapshots the working tree after an update has been applied, and "publishes".
 	// This is branch to commit. Publishing may mean push, create a PR, tweet the maintainer, whatever.
-	Push(context.Context, ...Update) error
+	Push(context.Context, UpdateGroup) error
 	// Fetch loads a remote ref without updating the working copy.
 	Fetch(ctx context.Context, branch string) error
 }
@@ -78,7 +78,9 @@ func (u *RepoUpdater) Update(ctx context.Context, baseBranch, branchName string,
 		}
 	}
 
-	if err := u.repo.Push(ctx, updates...); err != nil {
+	// TODO: promote to signature?
+	group := NewUpdateGroup("", updates...)
+	if err := u.repo.Push(ctx, group); err != nil {
 		return fmt.Errorf("pushing update: %w", err)
 	}
 	return nil
@@ -181,7 +183,9 @@ func (u *RepoUpdater) singleUpdate(ctx context.Context, log logrus.FieldLogger, 
 	if err := u.updater.ApplyUpdate(ctx, *update); err != nil {
 		return false, fmt.Errorf("applying batched update: %w", err)
 	}
-	if err := u.repo.Push(ctx, *update); err != nil {
+
+	ug := NewUpdateGroup("", *update)
+	if err := u.repo.Push(ctx, ug); err != nil {
 		return false, fmt.Errorf("pushing update: %w", err)
 	}
 	updateLog.Info("update complete")
@@ -230,7 +234,8 @@ func (u *RepoUpdater) groupedUpdate(ctx context.Context, log logrus.FieldLogger,
 		return 0, fmt.Errorf("executing pre-update script: %w", err)
 	}
 
-	if err := u.repo.Push(ctx, updates...); err != nil {
+	ug := NewUpdateGroup(groupName, updates...)
+	if err := u.repo.Push(ctx, ug); err != nil {
 		return 0, fmt.Errorf("pushing update: %w", err)
 	}
 	return len(updates), nil

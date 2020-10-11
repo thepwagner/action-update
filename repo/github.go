@@ -26,7 +26,7 @@ type GitHubRepo struct {
 var _ updater.Repo = (*GitHubRepo)(nil)
 
 type PullRequestContent interface {
-	Generate(context.Context, ...updater.Update) (title, body string, err error)
+	Generate(context.Context, updater.UpdateGroup) (title, body string, err error)
 }
 
 func NewGitHubRepo(repo *GitRepo, hmacKey []byte, repoNameOwner, token string) (*GitHubRepo, error) {
@@ -67,8 +67,8 @@ func (g *GitHubRepo) Fetch(ctx context.Context, branch string) error {
 }
 
 // Push follows the git push with opening a pull request
-func (g *GitHubRepo) Push(ctx context.Context, updates ...updater.Update) error {
-	if err := g.repo.Push(ctx, updates...); err != nil {
+func (g *GitHubRepo) Push(ctx context.Context, updates updater.UpdateGroup) error {
+	if err := g.repo.Push(ctx, updates); err != nil {
 		return err
 	}
 	if g.repo.NoPush {
@@ -81,8 +81,8 @@ func (g *GitHubRepo) Push(ctx context.Context, updates ...updater.Update) error 
 	return nil
 }
 
-func (g *GitHubRepo) createPR(ctx context.Context, updates []updater.Update) error {
-	title, body, err := g.prContent.Generate(ctx, updates...)
+func (g *GitHubRepo) createPR(ctx context.Context, updates updater.UpdateGroup) error {
+	title, body, err := g.prContent.Generate(ctx, updates)
 	if err != nil {
 		return fmt.Errorf("generating PR prContent: %w", err)
 	}

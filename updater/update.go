@@ -12,6 +12,15 @@ type Update struct {
 	Next string `json:"next"`
 }
 
+type UpdateGroup struct {
+	Name    string
+	Updates []Update
+}
+
+func NewUpdateGroup(name string, updates ...Update) UpdateGroup {
+	return UpdateGroup{Name: name, Updates: updates}
+}
+
 // ExistingUpdate is a previously proposed update(s).
 type ExistingUpdate struct {
 	// Is this update still in a proposed state?

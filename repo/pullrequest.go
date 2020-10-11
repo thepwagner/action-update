@@ -26,14 +26,14 @@ func NewGitHubPullRequestContent(gh *github.Client, key []byte) *GitHubPullReque
 	}
 }
 
-func (d *GitHubPullRequestContent) Generate(ctx context.Context, updates ...updater.Update) (title, body string, err error) {
-	if len(updates) == 1 {
-		update := updates[0]
+func (d *GitHubPullRequestContent) Generate(ctx context.Context, updates updater.UpdateGroup) (title, body string, err error) {
+	if len(updates.Updates) == 1 {
+		update := updates.Updates[0]
 		title = fmt.Sprintf("Update %s from %s to %s", update.Path, update.Previous, update.Next)
 		body, err = d.bodySingle(ctx, update)
 	} else {
 		title = "Dependency Updates"
-		body, err = d.bodyMulti(ctx, updates)
+		body, err = d.bodyMulti(ctx, updates.Updates)
 	}
 	return
 }
