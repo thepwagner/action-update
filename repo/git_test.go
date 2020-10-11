@@ -91,10 +91,11 @@ func TestGitRepo_Push(t *testing.T) {
 	require.NoError(t, err)
 	tmpFile := addTempFile(t, gr)
 
-	err = gr.Push(context.Background(), updater.Update{
+	ug := updater.NewUpdateGroup("", updater.Update{
 		Path: "github.com/test",
 		Next: "v1.0.0",
 	})
+	err = gr.Push(context.Background(), ug)
 	require.NoError(t, err)
 
 	// Re-open repo and get log from the update branch:
@@ -142,10 +143,11 @@ func TestGitRepo_Push_WithRemote(t *testing.T) {
 	require.NoError(t, err)
 	addTempFile(t, gr)
 
-	err = gr.Push(context.Background(), updater.Update{
+	ug := updater.NewUpdateGroup("", updater.Update{
 		Path: "github.com/test",
 		Next: "v1.0.0",
 	})
+	err = gr.Push(context.Background(), ug)
 	require.NoError(t, err)
 
 	// Branch was pushed to upstream repo:

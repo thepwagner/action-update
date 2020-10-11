@@ -30,7 +30,7 @@ func TestGitHubPullRequestContent_Generate(t *testing.T) {
 	client := repo.NewGitHubClient(token)
 	gen := repo.NewGitHubPullRequestContent(client, testKey)
 
-	title, body, err := gen.Generate(context.Background(), awsSdkGo13417)
+	title, body, err := gen.Generate(context.Background(), updater.NewUpdateGroup("", awsSdkGo13417))
 	require.NoError(t, err)
 	assert.Equal(t, "Update github.com/aws/aws-sdk-go from v1.34.16 to v1.34.17", title)
 	assert.Equal(t, strings.TrimSpace(`
@@ -39,7 +39,7 @@ Here is github.com/aws/aws-sdk-go v1.34.17, I hope it works.
 [changelog](https://github.com/aws/aws-sdk-go/blob/v1.34.17/CHANGELOG.md)
 
 <!--::action-update-go::
-{"updates":[{"path":"github.com/aws/aws-sdk-go","previous":"v1.34.16","next":"v1.34.17"}],"signature":"HAF6zSdBBOsbrLRClce7M73tN7VhCdPB6YYhECL/ifDC6DHR0YSGXoY6JQeEaFoncJbxp/afBpY+GVE5DUfWwQ=="}
+{"signed":{"updates":[{"path":"github.com/aws/aws-sdk-go","previous":"v1.34.16","next":"v1.34.17"}]},"signature":"0nxLHGFk/K3Iyi31ArR6wfS9nDMxSvnjcf4i4AeYhj3LWmiwdMDMySMLAkZ1nM/zuVWsENE3zfHy8cC6/6akGg=="}
 -->
 `), strings.TrimSpace(body))
 }
@@ -51,10 +51,11 @@ func TestGitHubPullRequestContent_ParseBody(t *testing.T) {
 
 	body := `
 <!--::action-update-go::
-{"updates":[{"path":"github.com/aws/aws-sdk-go","previous":"v1.34.16","next":"v1.34.17"}],"signature":"HAF6zSdBBOsbrLRClce7M73tN7VhCdPB6YYhECL/ifDC6DHR0YSGXoY6JQeEaFoncJbxp/afBpY+GVE5DUfWwQ=="}
+{"signed":{"updates":[{"path":"github.com/aws/aws-sdk-go","previous":"v1.34.16","next":"v1.34.17"}]},"signature":"0nxLHGFk/K3Iyi31ArR6wfS9nDMxSvnjcf4i4AeYhj3LWmiwdMDMySMLAkZ1nM/zuVWsENE3zfHy8cC6/6akGg=="}
 -->`
 	parsed := gen.ParseBody(body)
-	assert.Equal(t, []updater.Update{awsSdkGo13417}, parsed)
+	assert.Equal(t, []updater.Update{awsSdkGo13417}, parsed.Updates)
+	assert.Equal(t, "", parsed.Name)
 }
 
 func TestGitHubPullRequestContent_GenerateNoChangeLog(t *testing.T) {
@@ -62,14 +63,14 @@ func TestGitHubPullRequestContent_GenerateNoChangeLog(t *testing.T) {
 	client := repo.NewGitHubClient(token)
 	gen := repo.NewGitHubPullRequestContent(client, testKey)
 
-	title, body, err := gen.Generate(context.Background(), fooBar987)
+	title, body, err := gen.Generate(context.Background(), updater.NewUpdateGroup("", fooBar987))
 	require.NoError(t, err)
 	assert.Equal(t, "Update github.com/foo/bar from v0.4.1 to v99.88.77", title)
 	assert.Equal(t, strings.TrimSpace(`
 Here is github.com/foo/bar v99.88.77, I hope it works.
 
 <!--::action-update-go::
-{"updates":[{"path":"github.com/foo/bar","previous":"v0.4.1","next":"v99.88.77"}],"signature":"kq9CbO3rYkThJPiJgVTfhkfAG4q5aEeXuta0x3wPVdUnqQhitA/FasfJ2WftpfiZvueCnknoX04yxTM94BUn4A=="}
+{"signed":{"updates":[{"path":"github.com/foo/bar","previous":"v0.4.1","next":"v99.88.77"}]},"signature":"hSLvci96ReSaNrsSJ/yw9IsK9AfAvvXHWtJDlTh8TtZZth2vfT7/66BPmKDGb2GYQDNvDavFLOgtkHeWWT5ZTg=="}
 -->
 `), strings.TrimSpace(body))
 }
@@ -79,7 +80,8 @@ func TestGitHubPullRequestContent_GenerateMultiple(t *testing.T) {
 	client := repo.NewGitHubClient(token)
 	gen := repo.NewGitHubPullRequestContent(client, testKey)
 
-	title, body, err := gen.Generate(context.Background(), awsSdkGo13417, fooBar987)
+	ug := updater.NewUpdateGroup("my-awesome-group", awsSdkGo13417, fooBar987)
+	title, body, err := gen.Generate(context.Background(), ug)
 	require.NoError(t, err)
 	assert.Equal(t, "Dependency Updates", title)
 	assert.Equal(t, strings.TrimSpace(`
@@ -92,7 +94,7 @@ Here are some updates, I hope they work.
 #### github.com/foo/bar@v99.88.77
 
 <!--::action-update-go::
-{"updates":[{"path":"github.com/aws/aws-sdk-go","previous":"v1.34.16","next":"v1.34.17"},{"path":"github.com/foo/bar","previous":"v0.4.1","next":"v99.88.77"}],"signature":"TL6d3v5DKRu8uDY5doooDLLd7mJDHx6U5P4jRZYanLT4VI1dzt1gIRvZGW3G0ZlDQqmuTOftovTlwLHO1VW4Xw=="}
+{"signed":{"name":"my-awesome-group","updates":[{"path":"github.com/aws/aws-sdk-go","previous":"v1.34.16","next":"v1.34.17"},{"path":"github.com/foo/bar","previous":"v0.4.1","next":"v99.88.77"}]},"signature":"kpmZqS8mPeaKpl3T9cLsHGutsSaG3ZkXA15gOwAg6H5kBadk5H496Zev+CInIuWuK6EyyPpxQHr9MHthoC8Xdw=="}
 -->
 `), strings.TrimSpace(body))
 }

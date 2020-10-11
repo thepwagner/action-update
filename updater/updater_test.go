@@ -23,7 +23,7 @@ func TestRepoUpdater_Update(t *testing.T) {
 
 	branch := setupMockUpdate(ctx, r, u, mockUpdate)
 
-	err := ru.Update(ctx, baseBranch, branch, mockUpdate)
+	err := ru.Update(ctx, baseBranch, branch, updater.NewUpdateGroup("", mockUpdate))
 	require.NoError(t, err)
 }
 
@@ -31,7 +31,7 @@ func setupMockUpdate(ctx context.Context, r *mockRepo, u *mockUpdater, up update
 	branch := fmt.Sprintf("action-update-go/main/%s/%s", up.Path, up.Next)
 	r.On("NewBranch", baseBranch, branch).Return(nil)
 	u.On("ApplyUpdate", ctx, up).Return(nil)
-	r.On("Push", ctx, up).Return(nil)
+	r.On("Push", ctx, updater.NewUpdateGroup("", up)).Return(nil)
 	return branch
 }
 
