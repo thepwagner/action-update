@@ -28,6 +28,29 @@ func (_m *mockRepo) Branch() string {
 	return r0
 }
 
+// ExistingUpdates provides a mock function with given fields: ctx, baseBranch
+func (_m *mockRepo) ExistingUpdates(ctx context.Context, baseBranch string) (updater.ExistingUpdates, error) {
+	ret := _m.Called(ctx, baseBranch)
+
+	var r0 updater.ExistingUpdates
+	if rf, ok := ret.Get(0).(func(context.Context, string) updater.ExistingUpdates); ok {
+		r0 = rf(ctx, baseBranch)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(updater.ExistingUpdates)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, baseBranch)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Fetch provides a mock function with given fields: ctx, branch
 func (_m *mockRepo) Fetch(ctx context.Context, branch string) error {
 	ret := _m.Called(ctx, branch)

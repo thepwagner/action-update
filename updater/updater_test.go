@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,6 +26,8 @@ func TestRepoUpdater_Update(t *testing.T) {
 
 	err := ru.Update(ctx, baseBranch, branch, updater.NewUpdateGroup("", mockUpdate))
 	require.NoError(t, err)
+	r.AssertExpectations(t)
+	u.AssertExpectations(t)
 }
 
 func setupMockUpdate(ctx context.Context, r *mockRepo, u *mockUpdater, up updater.Update) string {
@@ -44,6 +47,7 @@ func TestRepoUpdater_UpdateAll_NoChanges(t *testing.T) {
 	r.On("SetBranch", baseBranch).Return(nil)
 	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
+	r.On("ExistingUpdates", ctx, baseBranch).Return(nil, nil)
 	u.On("Check", ctx, dep, mock.Anything).Return(nil, nil)
 
 	err := ru.UpdateAll(ctx, baseBranch)
@@ -61,6 +65,7 @@ func TestRepoUpdater_UpdateAll_Update(t *testing.T) {
 	r.On("SetBranch", baseBranch).Return(nil)
 	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
+	r.On("ExistingUpdates", ctx, baseBranch).Return(nil, nil)
 	availableUpdate := mockUpdate // avoid pointer to shared reference
 	u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
 	setupMockUpdate(ctx, r, u, mockUpdate) // delegates to .Update()
@@ -81,6 +86,7 @@ func TestRepoUpdater_UpdateAll_Multiple(t *testing.T) {
 	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
 	otherDep := updater.Dependency{Path: "github.com/foo/baz", Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep, otherDep}, nil)
+	r.On("ExistingUpdates", ctx, baseBranch).Return(nil, nil)
 	availableUpdate := mockUpdate // avoid pointer to shared reference
 	u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
 	otherUpdate := updater.Update{Path: "github.com/foo/baz", Next: "v3.0.0"}
@@ -108,6 +114,7 @@ func TestRepoUpdater_UpdateAll_MultipleGrouped(t *testing.T) {
 	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
 	otherDep := updater.Dependency{Path: "github.com/foo/baz", Version: mockUpdate.Previous}
 	u.On("Dependencies", ctx).Return([]updater.Dependency{dep, otherDep}, nil)
+	r.On("ExistingUpdates", ctx, baseBranch).Return(nil, nil)
 	availableUpdate := mockUpdate // avoid pointer to shared reference
 	u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
 	otherUpdate := updater.Update{Path: "github.com/foo/baz", Next: "v3.0.0"}
@@ -151,6 +158,7 @@ func TestRepoUpdater_UpdateAll_Scripts(t *testing.T) {
 		r.On("SetBranch", baseBranch).Return(nil)
 		dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
 		u.On("Dependencies", ctx).Return([]updater.Dependency{dep}, nil)
+		r.On("ExistingUpdates", ctx, baseBranch).Return(nil, nil)
 		availableUpdate := mockUpdate // avoid pointer to shared reference
 		u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
 		r.On("NewBranch", baseBranch, "action-update-go/main/foo").Times(1).Return(nil)
@@ -165,4 +173,31 @@ func TestRepoUpdater_UpdateAll_Scripts(t *testing.T) {
 		_, err = os.Stat(tokenPath)
 		require.NoError(t, err)
 	}
+}
+
+func TestRepoUpdater_UpdateAll_CoolDown(t *testing.T) {
+	// Group with 1 day cooldown
+	group := &updater.Group{Name: groupName, Pattern: "github.com/foo", CoolDown: "1D"}
+	err := group.Validate()
+	require.NoError(t, err)
+
+	r := &mockRepo{}
+	u := &mockUpdater{}
+	ru := updater.NewRepoUpdater(r, u, updater.WithGroups(group))
+	ctx := context.Background()
+	r.On("SetBranch", baseBranch).Return(nil)
+	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
+	otherDep := updater.Dependency{Path: "github.com/foo/baz", Version: mockUpdate.Previous}
+	u.On("Dependencies", ctx).Return([]updater.Dependency{dep, otherDep}, nil)
+
+	// Existing update within 30m means update is not checked:
+	existingUpdates := updater.ExistingUpdates{
+		{Group: updater.UpdateGroup{Name: groupName}, Merged: true, LastUpdate: time.Now().Add(-1 * time.Hour)},
+	}
+	r.On("ExistingUpdates", ctx, baseBranch).Return(existingUpdates, nil)
+
+	err = ru.UpdateAll(ctx, baseBranch)
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+	u.AssertExpectations(t)
 }
