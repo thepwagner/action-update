@@ -23,7 +23,6 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    - funlen
     - goconst
     - gocritic
     - gocyclo
@@ -54,7 +53,3 @@ issues:
   exclude:
     - G101
     - G306
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - funlen
