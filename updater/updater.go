@@ -160,7 +160,7 @@ func (u *RepoUpdater) updateBranch(ctx context.Context, log logrus.FieldLogger, 
 	for _, dep := range ungrouped {
 		ok, err := u.singleUpdate(ctx, log, branch, dep)
 		if err != nil {
-			logrus.WithField("path", dep.Path).WithError(err).Error("error processing update group")
+			logrus.WithField("path", dep.Path).WithError(err).Error("error processing update")
 			continue
 		}
 		if ok {
