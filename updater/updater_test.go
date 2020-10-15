@@ -100,6 +100,32 @@ func TestRepoUpdater_UpdateAll_Multiple(t *testing.T) {
 	u.AssertExpectations(t)
 }
 
+func TestRepoUpdater_UpdateAll_MultipleWithError(t *testing.T) {
+	r := &mockRepo{}
+	u := &mockUpdater{}
+	ru := updater.NewRepoUpdater(r, u)
+	ctx := context.Background()
+
+	r.On("SetBranch", baseBranch).Return(nil)
+	dep := updater.Dependency{Path: mockUpdate.Path, Version: mockUpdate.Previous}
+	otherDep := updater.Dependency{Path: "github.com/foo/baz", Version: mockUpdate.Previous}
+	u.On("Dependencies", ctx).Return([]updater.Dependency{dep, otherDep}, nil)
+	r.On("ExistingUpdates", ctx, baseBranch).Return(nil, nil)
+	availableUpdate := mockUpdate // avoid pointer to shared reference
+	u.On("Check", ctx, dep, mock.Anything).Return(&availableUpdate, nil)
+	otherUpdate := updater.Update{Path: "github.com/foo/baz", Next: "v3.0.0"}
+	u.On("Check", ctx, otherDep, mock.Anything).Return(&otherUpdate, nil)
+	branch := fmt.Sprintf("action-update-go/main/%s/%s", mockUpdate.Path, mockUpdate.Next)
+	r.On("NewBranch", baseBranch, branch).Return(nil)
+	u.On("ApplyUpdate", ctx, mockUpdate).Return(fmt.Errorf("kaboom"))
+	setupMockUpdate(ctx, r, u, otherUpdate) // delegates to .Update()
+
+	err := ru.UpdateAll(ctx, baseBranch)
+	require.NoError(t, err)
+	r.AssertExpectations(t)
+	u.AssertExpectations(t)
+}
+
 func TestRepoUpdater_UpdateAll_MultipleGrouped(t *testing.T) {
 	group := &updater.Group{Name: groupName, Pattern: "github.com/foo"}
 	err := group.Validate()
