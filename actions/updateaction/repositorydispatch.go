@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/go-github/v32/github"
+	"github.com/sirupsen/logrus"
+	"github.com/thepwagner/action-update/repo"
 	"github.com/thepwagner/action-update/updater"
 )
 
@@ -24,29 +27,56 @@ func (h *handler) RepositoryDispatch(ctx context.Context, evt *github.Repository
 }
 
 func (h *handler) repoDispatchActionUpdate(ctx context.Context, evt *github.RepositoryDispatchEvent) error {
-	update, err := unmarshallRepoDispatchUpdate(evt)
-	if err != nil {
-		return err
-	}
-
-	baseBranch := evt.GetRepo().GetDefaultBranch()
-	branchName := h.branchNamer.Format(baseBranch, update)
-	return h.repoDispatchUpdate(ctx, err, update, baseBranch, branchName)
-}
-
-func unmarshallRepoDispatchUpdate(evt *github.RepositoryDispatchEvent) (updater.Update, error) {
 	var payload RepoDispatchActionUpdatePayload
 	if err := json.Unmarshal(evt.ClientPayload, &payload); err != nil {
-		return updater.Update{}, fmt.Errorf("decoding payload: %w", err)
+		return fmt.Errorf("decoding payload: %w", err)
 	}
 	update := updater.Update{
 		Path: payload.Path,
 		Next: payload.Next,
 	}
-	return update, nil
-}
 
-func (h *handler) repoDispatchUpdate(ctx context.Context, err error, update updater.Update, baseBranch string, branchName string) error {
+	baseBranch := evt.GetRepo().GetDefaultBranch()
+	branchName := h.branchNamer.Format(baseBranch, update)
+
+	var success bool
+	if payload.Feedback.Owner != "" {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			// Search for the PR that was created:
+			gh := repo.NewGitHubClient(h.cfg.GitHubToken)
+			prList, _, err := gh.PullRequests.List(ctx, evt.GetRepo().GetOwner().GetName(), evt.GetRepo().GetName(), &github.PullRequestListOptions{
+				Head: branchName,
+			})
+			if err != nil {
+				logrus.WithError(err).Warn("error looking for pull request")
+			}
+
+			// TODO: should be JSON? this checkpoint requires human validation and that's OK
+			var feedbackBody string
+			if len(prList) == 0 {
+				feedbackBody = fmt.Sprintf("%s - %s - %v", evt.GetRepo().GetFullName(), branchName, success)
+			} else {
+				feedbackBody = prList[0].GetHTMLURL()
+			}
+
+			_, _, err = gh.Issues.CreateComment(ctx, payload.Feedback.Owner, payload.Feedback.Name, payload.Feedback.IssueNumber, &github.IssueComment{
+				Body: github.String(feedbackBody),
+			})
+			if err != nil {
+				logrus.WithError(err).Warn("error reporting feedback")
+			}
+		}()
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"path":           update.Path,
+		"version":        update.Next,
+		"branch":         branchName,
+		"feedback_issue": payload.Feedback.IssueNumber,
+	}).Debug("applying update from repository")
 	r, err := h.repo()
 	if err != nil {
 		return fmt.Errorf("getting Repo: %w", err)
@@ -57,12 +87,21 @@ func (h *handler) repoDispatchUpdate(ctx context.Context, err error, update upda
 	}
 
 	ug := updater.NewUpdateGroup("", update)
-	return repoUpdater.Update(ctx, baseBranch, branchName, ug)
+	if err := repoUpdater.Update(ctx, baseBranch, branchName, ug); err != nil {
+		return err
+	}
+	success = true
+	return nil
 }
 
-
-
 type RepoDispatchActionUpdatePayload struct {
-	Path string `json:"path"`
-	Next string `json:"next"`
+	Path     string                                  `json:"path"`
+	Next     string                                  `json:"next"`
+	Feedback RepoDispatchActionUpdatePayloadFeedback `json:"feedback"`
+}
+
+type RepoDispatchActionUpdatePayloadFeedback struct {
+	Owner       string `json:"owner"`
+	Name        string `json:"name"`
+	IssueNumber int    `json:"issue"`
 }
