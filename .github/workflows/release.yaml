@@ -11,3 +11,10 @@ jobs:
       - run: script/release
         env:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_PAT }}
+      - uses: thepwagner/action-update-go@main
+        with:
+          log_level: debug
+          dispatch_on_release: |
+            thepwagner/action-update-go
+            thepwagner/action-update-docker
+            thepwagner/action-update-dockerurl
