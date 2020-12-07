@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v33/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/thepwagner/action-update/actions/updateaction"
 )
