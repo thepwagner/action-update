@@ -5,7 +5,7 @@ require (
 	github.com/caarlos0/env/v6 v6.4.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/google/go-github/v33 v33.0.0
-	github.com/otiai10/copy v1.3.0
+	github.com/otiai10/copy v1.4.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/mod v0.4.0
