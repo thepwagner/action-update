@@ -1,7 +1,7 @@
 module github.com/thepwagner/action-update
 
 require (
-	github.com/bmatcuk/doublestar/v2 v2.0.4
+	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/caarlos0/env/v6 v6.4.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/google/go-github/v33 v33.0.0
