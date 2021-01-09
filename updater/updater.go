@@ -39,6 +39,7 @@ type Repo interface {
 }
 
 type Updater interface {
+	Name() string
 	Dependencies(context.Context) ([]Dependency, error)
 	Check(ctx context.Context, dep Dependency, filter func(string) bool) (*Update, error)
 	ApplyUpdate(context.Context, Update) error
