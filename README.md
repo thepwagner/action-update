@@ -11,6 +11,8 @@ To build an update action:
 
 ### Implementations
 
-* WIP: https://github.com/thepwagner/action-update-docker
+* https://github.com/thepwagner/action-update-docker
 * https://github.com/thepwagner/action-update-dockerurl
 * https://github.com/thepwagner/action-update-go
+* WIP: https://github.com/thepwagner/action-update-twirp
+* Abandoned: https://github.com/thepwagner/action-update-brewformula
