@@ -6,7 +6,7 @@ require (
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/google/go-github/v33 v33.0.0
 	github.com/otiai10/copy v1.5.0
-	github.com/sirupsen/logrus v1.8.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/mod v0.4.1
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
