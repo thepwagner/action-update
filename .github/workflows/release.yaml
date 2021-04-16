@@ -25,3 +25,4 @@ jobs:
             thepwagner/action-update-go
             thepwagner/action-update-docker
             thepwagner/action-update-dockerurl
+            thepwagner/action-update-twirp
