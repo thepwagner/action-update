@@ -27,8 +27,8 @@ func TestEnvironment_Ignored(t *testing.T) {
 		},
 		{
 			ignore:     "foo/*\nbar/**",
-			ignored:    []string{"foo/bar", "bar/foo", "bar/foo/bar"},
-			notIgnored: []string{"bar", "foo/bar/bar"},
+			ignored:    []string{"bar", "foo/bar", "bar/foo", "bar/foo/bar"},
+			notIgnored: []string{"foo/bar/bar"},
 		},
 		{
 			ignore:     "foo/**/*.bar",
