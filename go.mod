@@ -4,7 +4,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.0.2
 	github.com/caarlos0/env/v6 v6.6.2
 	github.com/go-git/go-git/v5 v5.4.2
-	github.com/google/go-github/v36 v36.0.0
+	github.com/google/go-github/v37 v37.0.0
 	github.com/otiai10/copy v1.6.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
