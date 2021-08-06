@@ -1,7 +1,5 @@
 # action-update
 
-## This is not endorsed by or associated with GitHub, Dependabot, etc.
-
 Golang toolkit for building GitHub Actions that analyze and perform dependency updates.
 
 To build an update action:
